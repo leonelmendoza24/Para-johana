@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Para Johana ❤️</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🦋%3C/text%3E%3C/svg%3E">
+
+<!-- Tipografías bonitas (Google Fonts) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Dancing+Script:wght@500;600&family=Great+Vibes&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ew: clamp(220px, 68vw, 340px);      /* ancho del sobre */
+    --eh: calc(var(--ew) * .66);          /* alto del sobre */
+    --lw: min(88vw, 440px);               /* ancho de la carta */
+    --lh: min(58vh, 520px);               /* alto de la carta */
+    --ph: calc(var(--lh) / 3);            /* alto de cada tercio (carta doblada en 3) */
+    --paper: #fbf5e6;
+  }
+  @supports (height: 1dvh){ :root{ --lh: min(58dvh, 520px); } }
+
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    background:#000; color:#fff; overflow:hidden;
+    font-family:'Dancing Script', cursive;
+    touch-action:manipulation;
+  }
+  ::selection{ background:rgba(140,190,255,.35); }
+
+  canvas{ position:fixed; inset:0; width:100%; height:100%; pointer-events:none; }
+  #cvBack{ z-index:0; }
+  #cvFront{ z-index:20; }
+
+  /* ---------- Escena: sobre + texto ---------- */
+  #scene{
+    position:fixed; inset:0; z-index:5;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:clamp(30px, 6vh, 54px);
+  }
+
+  #envWrap{
+    position:relative; width:var(--ew); height:var(--eh);
+    opacity:0; cursor:pointer; outline:none; z-index:6;
+  }
+  #envWrap:focus-visible #envelope{ outline:2px solid rgba(255,255,255,.6); outline-offset:8px; border-radius:8px; }
+
+  #glow{
+    position:absolute; left:-80%; top:-80%; width:260%; height:260%;
+    background:radial-gradient(closest-side, rgba(255,255,255,.34), rgba(255,255,255,.10) 45%, transparent 72%);
+    pointer-events:none; opacity:0; z-index:0;
+  }
+
+  #envelope{ position:absolute; inset:0; isolation:isolate; }
+
+  .env-back{
+    position:absolute; inset:0; z-index:1; border-radius:6px;
+    background:linear-gradient(180deg,#c3cbd8 0%,#e1e7ef 55%,#eef2f7 100%);
+    box-shadow:0 0 36px rgba(255,255,255,.30), 0 16px 40px rgba(0,0,0,.55);
+  }
+  .env-front{ position:absolute; inset:0; z-index:4; border-radius:6px; overflow:hidden; pointer-events:none; }
+  .env-front svg{ display:block; width:100%; height:100%; }
+
+  .flap{
+    position:absolute; left:0; top:0; width:100%; height:60.6%;
+    transform-origin:50% 0; transform-style:preserve-3d; z-index:5;
+  }
+  .flap .face{
+    position:absolute; inset:0;
+    -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  }
+  .flap .face svg{ display:block; width:100%; height:100%; }
+  .flap .face.back{ transform:rotateY(180deg); }
+
+  /* ---------- Carta ---------- */
+  #lWrap{
+    position:absolute; left:50%; top:50%;
+    width:var(--lw); height:var(--lh);
+    margin-left:calc(var(--lw) / -2); margin-top:calc(var(--lh) / -2);
+    perspective:1200px; z-index:3; pointer-events:none;
+  }
+  #lShadow{
+    position:absolute; left:0; top:50%; width:100%; height:var(--ph);
+    border-radius:3px;
+    box-shadow:0 14px 44px rgba(0,0,0,.65), 0 0 60px rgba(120,180,255,.16);
+  }
+  .letter{ position:absolute; inset:0; transform-style:preserve-3d; }
+  .panel{ position:absolute; left:0; width:100%; height:var(--ph); transform-style:preserve-3d; }
+  .pA{ top:0; transform-origin:50% 100%; }
+  .pB{ top:calc(var(--ph) - .5px); height:calc(var(--ph) + 1px); }
+  .pC{ top:calc(var(--ph) * 2); transform-origin:50% 0; }
+  .panel .face{
+    position:absolute; inset:0; background:var(--paper);
+    box-shadow:inset 0 0 0 1px rgba(150,120,70,.18);
+    -webkit-backface-visibility:hidden; backface-visibility:hidden;
+  }
+  .panel .face.back{ transform:rotateX(180deg); }
+  .pA .face.back{ background:linear-gradient(180deg,#fbf5e6 55%,#e6d9bb); }
+  .pC .face.back{ background:linear-gradient(180deg,#e6d9bb,#fbf5e6 45%); }
+  .shade{ position:absolute; inset:0; display:block; }
+  .pA .shade{ background:linear-gradient(0deg, rgba(90,65,30,.42), rgba(90,65,30,0) 70%); }
+  .pC .shade{ background:linear-gradient(180deg, rgba(90,65,30,.42), rgba(90,65,30,0) 70%); }
+
+  /* papel ya desdoblado (una sola pieza) */
+  #paperFlat{
+    position:absolute; inset:0; background:var(--paper); opacity:0; border-radius:2px;
+    box-shadow:inset 0 0 0 1px rgba(150,120,70,.18);
+  }
+  #paperFlat::before{
+    content:""; position:absolute; inset:12px;
+    border:1px solid rgba(196,154,92,.32); border-radius:2px;
+  }
+  #paperFlat::after{ /* marcas suaves de los dobleces */
+    content:""; position:absolute; left:0; right:0; top:33.333%; height:1px;
+    background:rgba(150,120,70,.13);
+    box-shadow:0 calc(var(--lh) / 3) 0 0 rgba(150,120,70,.13);
+  }
+
+  /* ============ ✏️ MENSAJE DE LA CARTA ============ */
+  #message{
+    position:absolute; inset:clamp(24px, 7%, 40px); z-index:5;
+    overflow-y:auto; overscroll-behavior:contain;
+    scrollbar-width:thin; scrollbar-color:rgba(160,120,70,.4) transparent;
+    font-family:'Caveat', cursive; font-weight:500;
+    font-size:clamp(1.2rem, 4.8vw, 1.55rem); line-height:1.5;
+    color:#3b2f2a; text-align:left;
+    pointer-events:none;
+  }
+  body.is-read #message{ pointer-events:auto; }
+  #message > *{ opacity:0; }          /* oculto hasta que la carta se abre */
+  #message p{ margin:0 0 .85em; }
+  #message .placeholder{ opacity:.55; }
+
+  /* ---------- Textos ---------- */
+  #invite{
+    font-family:'Great Vibes', cursive; font-weight:400;
+    font-size:clamp(2.1rem, 9.5vw, 3.1rem); line-height:1.15;
+    color:#fff; white-space:nowrap; cursor:pointer; text-align:center;
+    text-shadow:0 0 22px rgba(130,185,255,.55);
+  }
+  #invite .ch{ display:inline-block; }
+  #invite .heart{
+    font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;
+    font-size:.58em; vertical-align:.18em; margin-left:.12em; text-shadow:none;
+  }
+
+  #final{
+    position:fixed; inset:0; z-index:6; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:clamp(18px, 3.5vh, 30px); padding:0 22px;
+  }
+  #slot{ width:var(--lw); height:var(--lh); flex:none; visibility:hidden; }
+  #ps{ text-align:center; max-width:min(92vw, 560px); opacity:0; }
+  .ps-main{
+    font-family:'Great Vibes', cursive;
+    font-size:clamp(1.5rem, 6vw, 2.15rem); line-height:1.3;
+    color:#fff; text-shadow:0 0 18px rgba(140,190,255,.35);
+  }
+  .ps-sub{
+    margin-top:.75em;
+    font-family:'Dancing Script', cursive; font-weight:500;
+    font-size:clamp(1.05rem, 4vw, 1.35rem); line-height:1.4;
+    color:rgba(255,255,255,.88);
+  }
+</style>
+</head>
+
+<body>
+<canvas id="cvBack" aria-hidden="true"></canvas>
+
+<main id="scene">
+  <div id="envWrap" role="button" tabindex="0" aria-label="Abrir la carta">
+    <div id="glow"></div>
+
+    <div id="envelope">
+      <div class="env-back env-piece"></div>
+
+      <!-- Solapa (cara exterior con sello de corazón + cara interior) -->
+      <div class="flap env-piece" id="flap">
+        <div class="face front">
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="gF" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#f2f5fa"/><stop offset="1" stop-color="#ffffff"/>
+              </linearGradient>
+              <radialGradient id="gS" cx=".38" cy=".32" r=".8">
+                <stop offset="0" stop-color="#ff9db9"/><stop offset="1" stop-color="#e5416f"/>
+              </radialGradient>
+            </defs>
+            <polygon points="0,0 100,0 50,40" fill="url(#gF)"/>
+            <path d="M0 0 L50 40 L100 0" fill="none" stroke="rgba(110,120,140,.35)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+            <circle cx="50" cy="33" r="6.2" fill="url(#gS)"/>
+            <path transform="translate(45.2 28.6) scale(.96)" fill="#fff"
+                  d="M5 8.8C5 8.8 1.2 6.3 1.2 3.7 1.2 2.4 2.2 1.5 3.3 1.5 4 1.5 4.7 1.9 5 2.6 5.3 1.9 6 1.5 6.7 1.5 7.8 1.5 8.8 2.4 8.8 3.7 8.8 6.3 5 8.8 5 8.8Z"/>
+          </svg>
+        </div>
+        <div class="face back">
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="gFi" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#bcc5d3"/><stop offset="1" stop-color="#dfe5ee"/>
+              </linearGradient>
+            </defs>
+            <polygon points="0,0 100,0 50,40" fill="url(#gFi)"/>
+            <path d="M0 0 L50 40 L100 0" fill="none" stroke="rgba(110,120,140,.30)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Carta (doblada en tres) -->
+      <div id="lWrap">
+        <div id="lShadow"></div>
+        <div class="letter" id="letter">
+          <div class="panel pA">
+            <div class="face front"><i class="shade"></i></div>
+            <div class="face back"></div>
+          </div>
+          <div class="panel pB"><div class="face front"></div></div>
+          <div class="panel pC">
+            <div class="face front"><i class="shade"></i></div>
+            <div class="face back"></div>
+          </div>
+        </div>
+        <div id="paperFlat"></div>
+
+        <div id="message" lang="es">
+          <!--
+            ✏️✏️✏️  AQUÍ VA TU MENSAJE  ✏️✏️✏️
+            Cambia el texto de los <p> de abajo. Puedes añadir todos los
+            párrafos que quieras (cada <p> aparece con una pequeña animación).
+            Si el texto es largo, la carta se desplaza sola con el dedo/rueda.
+          -->
+          <p>Hola, pelaita. Quizá nunca llegue a encontrar las palabras suficientes para explicarte todo lo que significas para mí. Porque no se trata solamente de quererte, sino de todo lo que provocas en mí cuando te veo. Aún después de tantos años, sigo viéndote con los mismos ojos de cuando estábamos en el colegio; esos mismos ojos que, al verte por primera vez, simplemente comprendieron que marcarías mi vida.</p>
+          <p>Aunque hablábamos poco, cada detalle tuyo se me quedó guardado sin que te dieras cuenta. Por eso, volver a cruzarnos hace poco fue muy especial para mí. Te vi y sentí ese mismo cariño tan inocente, el mismo con el que esperaba tu hora de salida solo para observarte unos segundos, mientras pensaba que no importaba qué fuera de mi vida, pero quería que estuvieras presente en ella de alguna manera.</p>
+          <p>En fin, pelaita... me da pena escribir textos, jajaja, pero ¿qué hombre no lo haría por la mujer en la que está inmensamente interesado?</p>
+        </div>
+      </div>
+
+      <!-- Frente del sobre (triángulos laterales e inferior) -->
+      <div class="env-front env-piece">
+        <svg viewBox="0 0 100 66" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="gL" x1="0" y1="0" x2="1" y2=".3"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dde3ec"/></linearGradient>
+            <linearGradient id="gR" x1="1" y1="0" x2="0" y2=".3"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dde3ec"/></linearGradient>
+            <linearGradient id="gB" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#f4f6fa"/><stop offset="1" stop-color="#e6ebf2"/></linearGradient>
+          </defs>
+          <polygon points="0,0 51,33.5 0,66" fill="url(#gL)"/>
+          <polygon points="100,0 49,33.5 100,66" fill="url(#gR)"/>
+          <polygon points="0,66 50,32.5 100,66" fill="url(#gB)"/>
+          <path d="M0 0 L50 33 L100 0" fill="none" stroke="rgba(110,120,140,.35)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+          <path d="M0 66 L50 33 L100 66" fill="none" stroke="rgba(110,120,140,.30)" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <p id="invite"></p>
+</main>
+
+<!-- Zona final: hueco de la carta + texto de abajo -->
+<section id="final">
+  <div id="slot"></div>
+  <div id="ps">
+    <p class="ps-main">Sé que no es mucho, pero es un poco de lo que siento por ti</p>
+    <p class="ps-sub">PD: me dijiste que te encantan las mariposas, por eso las puse</p>
+  </div>
+</section>
+
+<canvas id="cvFront" aria-hidden="true"></canvas>
+
+<!-- Librería de animación -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<script>
+(() => {
+'use strict';
+
+const G = window.gsap;
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const TAU = Math.PI * 2;
+const rand  = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const pick  = (v, d) => (v === undefined ? d : v);
+const easeOutBack = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const angDiff = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
+const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
+
+/* ---------- Elementos ---------- */
+const envWrap = $('#envWrap'), glow = $('#glow'), flap = $('#flap'),
+      lWrap = $('#lWrap'), lShadow = $('#lShadow'), letter = $('#letter'),
+      pA = $('.pA'), pC = $('.pC'), shades = $$('.shade'),
+      flat = $('#paperFlat'), message = $('#message'),
+      invite = $('#invite'), slot = $('#slot'), ps = $('#ps'),
+      envPieces = $$('.env-piece');
+
+/* ---------- Estado ---------- */
+const S = { ready: false, open: false, done: false, maxB: 0, maxF: 0, tB: 1.0, tF: .3, intB: 1.0, intF: .5, dim: null };
+const calm  = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const small = Math.min(innerWidth, innerHeight) < 560;
+const MAXB = (small ? 13 : 22) * (calm ? .5 : 1);
+const MAXF = (small ? 15 : 28) * (calm ? .5 : 1);
+
+/* ---------- Texto "ábrelo Johana ❤️" letra por letra ---------- */
+const label = 'ábrelo pelaita'.normalize('NFC');
+invite.setAttribute('aria-label', 'ábrelo pelaita');
+[...label].forEach(ch => {
+  const s = document.createElement('span');
+  s.className = 'ch'; s.setAttribute('aria-hidden', 'true');
+  s.textContent = ch === ' ' ? '\u00A0' : ch;
+  invite.appendChild(s);
+});
+const chars = $$('.ch', invite);
+
+/* =====================================================
+   CANVAS: mariposas amarillas con brillo + florecitas
+   ===================================================== */
+const cvs  = [$('#cvBack'), $('#cvFront')];
+const ctxs = cvs.map(c => c.getContext('2d'));
+const V = { w: innerWidth, h: innerHeight, dpr: 1 };
+function sizeCanvas() {
+  V.dpr = Math.min(window.devicePixelRatio || 1, 2);
+  V.w = innerWidth; V.h = innerHeight;
+  cvs.forEach((c, i) => {
+    c.width = Math.round(V.w * V.dpr); c.height = Math.round(V.h * V.dpr);
+    ctxs[i].setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
+  });
+}
+sizeCanvas();
+
+const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+
+/* brillo amarillo (sprite) */
+const GLOW_Y = (() => {
+  const c = mk(64, 64), g = c.getContext('2d');
+  const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,226,110,.55)');
+  r.addColorStop(.35, 'rgba(255,204,64,.22)');
+  r.addColorStop(1, 'rgba(255,190,40,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  return c;
+})();
+
+/* alas (unidades relativas) */
+const WING_UP = new Path2D();
+WING_UP.moveTo(0, -.05);
+WING_UP.bezierCurveTo(.15, -1.15, 1.15, -1.25, 1.05, -.35);
+WING_UP.bezierCurveTo(1.0, .05, .4, .12, 0, .05);
+WING_UP.closePath();
+const WING_LO = new Path2D();
+WING_LO.moveTo(0, .02);
+WING_LO.bezierCurveTo(.75, -.02, 1.0, .45, .7, .8);
+WING_LO.bezierCurveTo(.45, 1.1, .12, .72, 0, .1);
+WING_LO.closePath();
+
+const gradCache = new WeakMap();
+function wingGrad(ctx) {
+  let g = gradCache.get(ctx);
+  if (!g) {
+    g = ctx.createLinearGradient(0, -.3, 1.1, 0);
+    g.addColorStop(0, '#fff7b8'); g.addColorStop(.5, '#ffd93d'); g.addColorStop(1, '#ffab0f');
+    gradCache.set(ctx, g);
+  }
+  return g;
+}
+
+/* florecitas (sprites pre-renderizados) */
+const FLOWER_COLORS = [
+  ['#ffc7de', '#ff8fbd'],   // rosa
+  ['#e3d4ff', '#b79aff'],   // lavanda
+  ['#fff4f8', '#ffd1e3'],   // blanco rosado
+  ['#d3eaff', '#8ec5ff'],   // celeste
+  ['#ffe3cc', '#ffb98a']    // durazno
+];
+function makeFlower(c1, c2, n) {
+  const S_ = 112, c = mk(S_, S_), g = c.getContext('2d'), m = S_ / 2, R = 40;
+  const a = g.createRadialGradient(m, m, 0, m, m, m);
+  a.addColorStop(0, hexA(c2, .32)); a.addColorStop(1, hexA(c2, 0));
+  g.fillStyle = a; g.fillRect(0, 0, S_, S_);
+  g.translate(m, m);
+  for (let i = 0; i < n; i++) {
+    g.save(); g.rotate(i * TAU / n);
+    g.beginPath(); g.moveTo(0, 0);
+    g.bezierCurveTo(-R * .55, -R * .25, -R * .55, -R * .95, 0, -R * .98);
+    g.bezierCurveTo( R * .55, -R * .95,  R * .55, -R * .25, 0, 0);
+    const gr = g.createLinearGradient(0, 0, 0, -R);
+    gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(.35, c1); gr.addColorStop(1, c2);
+    g.globalAlpha = .93; g.fillStyle = gr; g.fill();
+    g.globalAlpha = 1; g.lineWidth = 1; g.strokeStyle = 'rgba(255,255,255,.45)'; g.stroke();
+    g.beginPath(); g.moveTo(0, -R * .18); g.lineTo(0, -R * .68); g.strokeStyle = 'rgba(255,255,255,.35)'; g.stroke();
+    g.restore();
+  }
+  const cg = g.createRadialGradient(0, 0, 0, 0, 0, 8);
+  cg.addColorStop(0, '#fff6b0'); cg.addColorStop(.6, '#ffd75a'); cg.addColorStop(1, '#f5a623');
+  g.fillStyle = cg; g.beginPath(); g.arc(0, 0, 7, 0, TAU); g.fill();
+  return c;
+}
+const FLOWERS = FLOWER_COLORS.map(([c1, c2], i) => makeFlower(c1, c2, i % 2 ? 6 : 5));
+
+const butterflies = [], flowers = [], dust = [];
+
+function addDust(x, y, n, col, speed) {
+  for (let i = 0; i < n && dust.length < 260; i++) {
+    const a = rand(0, TAU), v = rand(.3, 1) * speed;
+    dust.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 4, age: 0, life: rand(.7, 1.6), r: rand(.6, 1.7), col });
+  }
+}
+
+/* zona a evitar para las flores (sobre / carta) */
+function exclusion() {
+  const pad = 26;
+  const a = (S.open ? slot : envWrap).getBoundingClientRect();
+  const b = (S.open ? ps : invite).getBoundingClientRect();
+  return { l: Math.min(a.left, b.left) - pad, r: Math.max(a.right, b.right) + pad,
+           t: Math.min(a.top, b.top) - pad,   b: Math.max(a.bottom, b.bottom) + pad };
+}
+
+function spawnFlower() {
+  const ex = exclusion();
+  let x, y, tries = 0, bad;
+  do {
+    x = rand(.04, .96) * V.w; y = rand(.05, .96) * V.h; tries++;
+    bad = x > ex.l && x < ex.r && y > ex.t && y < ex.b;
+  } while (bad && tries < 14);
+  if (bad) return;
+  const k = V.w < 600 ? .85 : 1;
+  flowers.push({
+    x, y, sprite: FLOWERS[(Math.random() * FLOWERS.length) | 0],
+    size: rand(20, 34) * k, rot: rand(0, TAU), spin: rand(-.2, .2),
+    vx: rand(-3, 3), vy: rand(-9, -3), age: 0, life: rand(12, 21), grow: rand(1.3, 2.0), sw: rand(0, TAU)
+  });
+  addDust(x, y, 5, '255,205,228', 14);
+}
+
+function spawnButterfly(o = {}) {
+  const sm = V.w < 600;
+  const b = {
+    x: pick(o.x, rand(.05, .95) * V.w), y: pick(o.y, rand(.08, .92) * V.h),
+    heading: pick(o.heading, rand(-Math.PI, Math.PI)),
+    speed: rand(24, 50), turn: 0, turnTarget: 0, turnT: 0,
+    size: rand(6, 10.5) * (sm ? .9 : 1), phase: rand(0, TAU), flapSpeed: rand(9, 14),
+    age: 0, life: rand(18, 32), birth: o.burst ? .45 : 1.5,
+    layer: pick(o.layer, Math.random() < .2 ? 1 : 0), alpha: 0, scale: 0,
+    boost: o.burst ? rand(110, 190) : 0, dustT: rand(0, .2)
+  };
+  butterflies.push(b);
+  addDust(b.x, b.y, o.burst ? 4 : 9, '255,226,120', o.burst ? 30 : 22);
+}
+
+function updateButterfly(b, dt) {
+  b.age += dt;
+  b.turnT -= dt;
+  if (b.turnT <= 0) { b.turnTarget = rand(-1.7, 1.7); b.turnT = rand(.5, 1.5); }
+  b.turn += (b.turnTarget - b.turn) * Math.min(1, dt * 3);
+  b.heading += b.turn * dt;
+  const m = 30;
+  if (b.x < -m || b.x > V.w + m || b.y < -m || b.y > V.h + m) {
+    b.heading += angDiff(Math.atan2(V.h / 2 - b.y, V.w / 2 - b.x), b.heading) * Math.min(1, dt * 2.5);
+  }
+  const spd = b.speed + b.boost; b.boost *= Math.pow(.3, dt);
+  b.x += Math.cos(b.heading) * spd * dt;
+  b.y += Math.sin(b.heading) * spd * dt;
+  b.phase += b.flapSpeed * dt * (1 + b.boost / 120);
+  b.scale = easeOutBack(clamp(b.age / b.birth, 0, 1));
+  b.alpha = clamp(b.age / (b.birth * .7), 0, 1) * clamp((b.life - b.age) / 2.5, 0, 1);
+  b.dustT -= dt;
+  if (b.dustT <= 0 && b.alpha > .5) { addDust(b.x + rand(-2, 2), b.y + rand(-2, 2), 1, '255,225,120', 6); b.dustT = rand(.08, .18); }
+}
+
+function drawButterfly(ctx, b) {
+  if (b.alpha <= .01) return;
+  const s = b.size * b.scale;
+  ctx.save();
+  ctx.translate(b.x, b.y);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = b.alpha * .85;
+  const g = s * 5.2; ctx.drawImage(GLOW_Y, -g / 2, -g / 2, g, g);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = b.alpha;
+  ctx.rotate(b.heading + Math.PI / 2);
+  ctx.scale(s, s);
+  const flapK = .22 + .78 * Math.abs(Math.sin(b.phase));
+  const wg = wingGrad(ctx);
+  for (const side of [1, -1]) {
+    ctx.save(); ctx.scale(side * flapK, 1);
+    ctx.fillStyle = wg; ctx.fill(WING_UP); ctx.fill(WING_LO);
+    ctx.lineWidth = .07; ctx.strokeStyle = 'rgba(176,104,0,.55)'; ctx.stroke(WING_UP); ctx.stroke(WING_LO);
+    ctx.fillStyle = 'rgba(120,70,0,.35)';
+    ctx.beginPath(); ctx.arc(.86, -.52, .09, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(.55, .55, .07, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#6b3f00';
+  ctx.beginPath(); ctx.ellipse(0, 0, .075, .62, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = '#6b3f00'; ctx.lineWidth = .045; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, -.55); ctx.quadraticCurveTo(-.08, -.9, -.3, -1.05);
+  ctx.moveTo(0, -.55); ctx.quadraticCurveTo( .08, -.9,  .3, -1.05);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFlower(ctx, f) {
+  const k = clamp(f.age / f.grow, 0, 1);
+  const a = Math.min(1, f.age / .7) * clamp((f.life - f.age) / 3, 0, 1) * .92;
+  if (a <= .01) return;
+  const s = f.size * easeOutBack(k) * (1 + .05 * Math.sin(f.age * 2.2 + f.sw));
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.translate(f.x, f.y);
+  ctx.rotate(f.rot + f.age * f.spin - (1 - k) * 2.4);
+  ctx.drawImage(f.sprite, -s / 2, -s / 2, s, s);
+  ctx.restore();
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  ctxs.forEach(c => c.clearRect(0, 0, V.w, V.h));
+
+  S.tF -= dt;
+  if (S.tF <= 0) { if (flowers.length < Math.floor(S.maxF)) spawnFlower(); S.tF = S.intF * rand(.6, 1.4); }
+  S.tB -= dt;
+  if (S.tB <= 0) { if (butterflies.length < Math.floor(S.maxB)) spawnButterfly(); S.tB = S.intB * rand(.6, 1.4); }
+
+  const c0 = ctxs[0];
+  for (let i = flowers.length - 1; i >= 0; i--) {
+    const f = flowers[i]; f.age += dt;
+    if (f.age >= f.life) { flowers.splice(i, 1); continue; }
+    f.x += (f.vx + Math.sin(f.age * .7 + f.sw) * 3) * dt; f.y += f.vy * dt;
+    drawFlower(c0, f);
+  }
+
+  c0.save(); c0.globalCompositeOperation = 'lighter';
+  for (let i = dust.length - 1; i >= 0; i--) {
+    const d = dust[i]; d.age += dt;
+    if (d.age >= d.life) { dust.splice(i, 1); continue; }
+    d.x += d.vx * dt; d.y += d.vy * dt; d.vx *= .985; d.vy *= .985;
+    const k = 1 - d.age / d.life;
+    c0.fillStyle = `rgba(${d.col},${(k * k * .9).toFixed(3)})`;
+    c0.beginPath(); c0.arc(d.x, d.y, d.r * (.6 + .4 * k), 0, TAU); c0.fill();
+  }
+  c0.restore();
+
+  for (let i = butterflies.length - 1; i >= 0; i--) {
+    const b = butterflies[i]; updateButterfly(b, dt);
+    if (b.age >= b.life) { butterflies.splice(i, 1); continue; }
+    drawButterfly(ctxs[b.layer], b);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* =====================================================
+   ANIMACIÓN DEL SOBRE Y LA CARTA (GSAP)
+   ===================================================== */
+if (!G) {
+  envWrap.style.opacity = 1;
+  S.maxB = MAXB; S.maxF = MAXF;
+  document.body.insertAdjacentHTML('beforeend',
+    '<p style="position:fixed;bottom:16px;left:0;right:0;text-align:center;color:#888;font:14px sans-serif;z-index:30">No se pudo cargar la animación. Revisa tu conexión y recarga la página.</p>');
+  return;
+}
+
+let pulse = null;
+
+function layoutInit() {
+  const ew = envWrap.offsetWidth, eh = envWrap.offsetHeight, lw = lWrap.offsetWidth, lh = lWrap.offsetHeight;
+  S.dim = { ew, eh, lw, lh, ph: lh / 3, s0: ew * .8 / lw, s1: ew * 1.14 / lw };
+  G.set(lWrap,   { scale: S.dim.s0, x: 0, y: eh * .05, rotation: 0, zIndex: 3 });
+  G.set(lShadow, { yPercent: -50, height: S.dim.ph, opacity: 0 });
+  G.set(flap,    { transformPerspective: 900, transformOrigin: '50% 0%', rotationX: 0, zIndex: 5 });
+  G.set(pA,      { rotationX: -180, z: 2 });
+  G.set(pC,      { rotationX: -180, z: -2 });
+  G.set(ps,      { opacity: 0, y: 16 });
+}
+layoutInit();
+G.set(chars, { opacity: 0, y: 14, filter: 'blur(6px)' });
+G.set(envWrap, { opacity: 0 });
+
+/* latido del sobre */
+function startPulse() {
+  pulse = G.timeline({ repeat: -1 });
+  pulse
+    .to(envWrap, { scale: 1.075, duration: .20, ease: 'sine.out' }, 0)
+    .to(glow,    { opacity: 1, scale: 1.12, duration: .20, ease: 'sine.out' }, 0)
+    .to(envWrap, { scale: 1, duration: .22, ease: 'sine.in' }, .20)
+    .to(glow,    { opacity: .6, scale: 1, duration: .22, ease: 'sine.in' }, .20)
+    .to(envWrap, { scale: 1.05, duration: .18, ease: 'sine.out' }, .46)
+    .to(glow,    { opacity: .85, scale: 1.07, duration: .18, ease: 'sine.out' }, .46)
+    .to(envWrap, { scale: 1, duration: .55, ease: 'sine.inOut' }, .64)
+    .to(glow,    { opacity: .45, scale: 1, duration: .55, ease: 'sine.inOut' }, .64)
+    .to({}, { duration: .45 }, 1.19);
+}
+
+/* Intro: el sobre emerge del negro y, a la vez, empiezan a brotar mariposas y flores */
+G.to(S, { maxB: MAXB, maxF: MAXF, duration: 14, ease: 'power1.inOut', delay: .6 });
+G.timeline()
+  .fromTo(envWrap, { opacity: 0, scale: .72, y: 24 }, { opacity: 1, scale: 1, y: 0, duration: 2.1, ease: 'power3.out' }, .35)
+  .to(glow, { opacity: .55, duration: 2.4, ease: 'power2.out' }, .35)
+  .to(chars, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 1, stagger: .07, ease: 'power2.out', clearProps: 'filter' }, 1.5)
+  .call(() => { S.ready = true; startPulse(); }, null, 2.5);
+
+/* explosión de magia al abrir */
+function magicBurst() {
+  const r = envWrap.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height * .4;
+  addDust(x, y, 36, '160,205,255', 70);
+  addDust(x, y, 24, '255,226,120', 60);
+  for (let i = 0; i < 9; i++) {
+    setTimeout(() => spawnButterfly({ x: x + rand(-30, 30), y: y + rand(-10, 20), heading: -Math.PI / 2 + rand(-1.3, 1.3), burst: true, layer: 1 }), i * 140);
+  }
+  S.maxB += 6;
+}
+
+function slotDelta() {
+  const e = envWrap.getBoundingClientRect(), s = slot.getBoundingClientRect();
+  return { dx: (s.left + s.width / 2) - (e.left + e.width / 2), dy: (s.top + s.height / 2) - (e.top + e.height / 2) };
+}
+
+function openLetter() {
+  if (S.open || !S.ready) return;
+  S.open = true;
+  document.body.classList.add('is-open');
+  envWrap.setAttribute('aria-disabled', 'true');
+  envWrap.style.cursor = 'default'; invite.style.cursor = 'default';
+  if (pulse) pulse.kill();
+
+  const { dx, dy } = slotDelta(), d = S.dim;
+  const riseY = -(d.eh / 2 + d.ph * d.s0 / 2 + 14);
+  const msgItems = $$('#message > *');
+  G.set(msgItems, { opacity: 0 });
+
+  G.timeline({
+      defaults: { ease: 'power2.inOut' },
+      onComplete() { S.done = true; document.body.classList.add('is-read'); }
+    })
+    .call(magicBurst, null, .1)
+    .to(envWrap, { scale: 1, duration: .35, ease: 'power2.out' }, 0)
+    .to(invite,  { opacity: 0, y: 20, filter: 'blur(8px)', duration: .7, ease: 'power2.in' }, 0)
+    .to(glow,    { opacity: .5, scale: 1.15, duration: 1.2, ease: 'power2.out' }, 0)
+
+    /* 1 · se abre la solapa */
+    .to(flap, { rotationX: 180, duration: .8 }, .2)
+    .set(flap, { zIndex: 2 }, .6)
+
+    /* 2 · el papel doblado sube y sale del sobre */
+    .to(lShadow, { opacity: 1, duration: .6 }, .9)
+    .to(lWrap, { y: riseY, rotation: -4, duration: .95, ease: 'power2.out' }, .85)
+
+    /* 3 · se posiciona al centro, tapando el sobre */
+    .set(lWrap, { zIndex: 10 }, 1.85)
+    .to(lWrap, { y: 0, scale: d.s1, rotation: 0, duration: .85, ease: 'power3.inOut' }, 1.85)
+
+    /* 4 · se desdobla */
+    .to(pC, { rotationX: 0, z: 0, duration: .85 }, 2.8)
+    .to(pA, { rotationX: 0, z: 0, duration: .85 }, 3.15)
+    .to(shades, { opacity: 0, duration: .9 }, 3.0)
+    .to(lWrap, { x: dx, y: dy, scale: 1, duration: 1.35 }, 2.8)
+    .to(lShadow, { height: d.lh, duration: 1.35 }, 2.8)
+    .to(glow, { opacity: 0, duration: .9, ease: 'power1.out' }, 2.7)
+    .to(envPieces, { opacity: 0, duration: .7, ease: 'power1.out' }, 3.3)
+    .to(flat, { opacity: 1, duration: .6 }, 4.0)
+    .set(letter, { display: 'none' }, 4.65)
+
+    /* 5 · aparece el mensaje y el texto de abajo */
+    .to(ps, { opacity: 1, y: 0, duration: 1.2, ease: 'power2.out' }, 4.1)
+    .fromTo(msgItems, { opacity: 0, y: 10, filter: 'blur(5px)' },
+                      { opacity: 1, y: 0, filter: 'blur(0px)', duration: 1, stagger: .28, ease: 'power2.out', clearProps: 'filter' }, 4.3);
+
+  /* más magia después de abrir */
+  G.to(S, { maxB: MAXB + 6, maxF: MAXF + 8, duration: 4, delay: 2 });
+}
+
+[envWrap, invite].forEach(el => el.addEventListener('click', openLetter));
+envWrap.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openLetter(); }
+});
+
+addEventListener('resize', () => {
+  sizeCanvas();
+  if (!S.open) layoutInit();
+  else if (S.done) { const { dx, dy } = slotDelta(); G.set(lWrap, { x: dx, y: dy }); }
+});
+})();
+</script>
+</body>
+</html>
